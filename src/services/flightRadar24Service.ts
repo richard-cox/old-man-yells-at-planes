@@ -221,6 +221,15 @@ export interface HistoricFlightPositionsParams extends FlightPositionsParams {
   timestamp: number;
 }
 
+export type EventType =
+  | 'gate_departure'
+  | 'takeoff'
+  | 'cruising'
+  | 'airspace_transition'
+  | 'descent'
+  | 'landed'
+  | 'gate_arrival';
+
 export interface FlightEventsParams {
   /**
    * 	
@@ -235,7 +244,7 @@ export interface FlightEventsParams {
 
       Examples: gate_departure,takeoff,cruising,airspace_transition,descent,landed,gate_arrival
      */
-  event_types: string;
+  event_types: EventType[]; // TODO: RC
 }
 
 export interface FlightSummaryParams {
@@ -364,9 +373,19 @@ class HistoricService extends BaseService {
 
   public flightEvents = {
     getFull: (params: FlightEventsParams) =>
-      this.get<{ data: HistoricFlightEventsFull[] }>('/api/historic/flight-events/full', { params }),
+      this.get<{ data: HistoricFlightEventsFull[] }>('/api/historic/flight-events/full', {
+        params: {
+          ...params,
+          event_types: params.event_types.join(','),
+        },
+      }),
     getLight: (params: FlightEventsParams) =>
-      this.get<{ data: HistoricFlightEventsLight[] }>('/api/historic/flight-events/light', { params }),
+      this.get<{ data: HistoricFlightEventsLight[] }>('/api/historic/flight-events/light', {
+        params: {
+          ...params,
+          event_types: params.event_types.join(','),
+        },
+      }),
   };
 }
 
