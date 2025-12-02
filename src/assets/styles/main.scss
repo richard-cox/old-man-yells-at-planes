@@ -1,0 +1,82 @@
+@import './_variables.scss';
+
+/* Global Styles */
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: $primary-background-color;
+  color: $text-color-primary;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start; /* Align to top, App.vue handles centering vertically */
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Base Input Styling */
+.input-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: $spacing-md;
+  width: 100%; /* Ensure inputs take full width of their container */
+
+  label {
+    color: $text-color-secondary;
+    font-size: $font-size-sm;
+    margin-bottom: $spacing-xs;
+    text-align: left;
+  }
+
+  input[type='date'],
+  input[type='number'],
+  input[type='text'] {
+    background-color: $primary-background-color;
+    border: 1px solid $border-color;
+    border-radius: $border-radius-md;
+    padding: $spacing-sm $spacing-md;
+    color: $text-color-primary;
+    font-size: $font-size-md;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    width: 100%;
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+
+    &:focus {
+      border-color: $accent-color;
+      box-shadow: 0 0 0 2px rgba($accent-color, 0.3);
+      outline: none;
+    }
+
+    &::placeholder {
+      color: $text-color-secondary;
+    }
+  }
+
+  /* Specific styling for date inputs to ensure consistent appearance */
+  input[type='date'] {
+    -webkit-appearance: none; /* Remove default styling for Chrome/Safari */
+    appearance: none; /* Remove default styling for other browsers */
+    position: relative;
+
+    &::-webkit-calendar-picker-indicator {
+      filter: invert(1); /* Make calendar icon visible on dark background */
+      cursor: pointer;
+    }
+  }
+}
+
+/* Card Base Styling */
+.base-card {
+  background-color: $card-background-color;
+  border-radius: $border-radius-lg;
+  box-shadow: $box-shadow-elevation-2;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  width: 100%;
+  box-sizing: border-box;
+}

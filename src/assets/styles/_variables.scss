@@ -1,0 +1,38 @@
+// Color Palette
+$primary-background-color: #1a1a2e; // Dark background
+$card-background-color: #2e2e4a; // Slightly lighter card background
+$accent-color: #00bcd4; // Cyan-like accent
+$accent-color-hover: #00aabf; // Darker cyan for hover
+$text-color-primary: #e0e0e0; // Light text for readability
+$text-color-secondary: #a0a0a0; // Slightly darker text for secondary info
+$error-color: #ef5350; // Red for errors
+$border-color: #4a4a6a; // Border color for inputs/cards
+
+// Spacing
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+
+// Border Radius
+$border-radius-sm: 4px;
+$border-radius-md: 8px;
+$border-radius-lg: 12px;
+$border-radius-xl: 16px;
+
+// Box Shadow (Elevation)
+$box-shadow-elevation-1: 0 2px 4px rgba(0, 0, 0, 0.2);
+$box-shadow-elevation-2: 0 4px 8px rgba(0, 0, 0, 0.3);
+$box-shadow-elevation-3: 0 6px 12px rgba(0, 0, 0, 0.4);
+
+// Font Sizes
+$font-size-sm: 0.875rem; // 14px
+$font-size-md: 1rem; // 16px
+$font-size-lg: 1.125rem; // 18px
+$font-size-xl: 1.25rem; // 20px
+
+// Breakpoints (Mobile-first)
+$breakpoint-sm: 600px;
+$breakpoint-md: 900px;
+$breakpoint-lg: 1200px;
