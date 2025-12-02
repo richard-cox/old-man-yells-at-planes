@@ -14,4 +14,11 @@ export default defineConfig({
     port: 8005,
     open: false,
   },
+   css: {
+    preprocessorOptions: {
+      scss: {
+        api: 'modern-compiler' // or "modern"
+      }
+    }
+  }
 });

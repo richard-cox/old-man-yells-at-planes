@@ -77,6 +77,7 @@ const handleFetchData = () => {
   box-sizing: border-box;
   text-align: center;
   color: $text-color-primary;
+  width: 100%;
 
   @media (max-width: $breakpoint-sm) {
     padding: $spacing-sm;
@@ -102,7 +103,7 @@ const handleFetchData = () => {
   padding: $spacing-lg;
   margin-bottom: $spacing-lg;
   width: 100%;
-  max-width: 700px; /* Max width for the main card */
+  max-width: 800px; /* Max width for the main card */
   box-sizing: border-box;
 
   @media (max-width: $breakpoint-sm) {

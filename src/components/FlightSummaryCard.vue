@@ -45,7 +45,7 @@ defineProps<Props>();
 
 .flight-summary-card {
   text-align: center;
-  max-width: 700px; /* Match App.vue card-container max-width */
+  max-width: 800px; /* Match App.vue card-container max-width */
 
   h2 {
     color: $accent-color;
