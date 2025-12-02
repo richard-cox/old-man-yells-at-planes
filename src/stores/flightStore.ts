@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { fetchFlightSummaryData } from '@/services/flightService';
+import { FlightRadar24Client } from '../services/flightRadar24Service';
 
 interface FlightState {
   startDate: string;
@@ -9,6 +9,8 @@ interface FlightState {
   isLoading: boolean;
   error: string | null;
 }
+// FR24_API_TOKEN
+const client = new FlightRadar24Client(import.meta.env.VITE_FR24_API_TOKEN);
 
 export const useFlightStore = defineStore('flight', {
   state: (): FlightState => ({
@@ -43,12 +45,34 @@ export const useFlightStore = defineStore('flight', {
       }
 
       try {
-        const data = await fetchFlightSummaryData(
-          this.startDate,
-          this.endDate,
-          this.height
-        );
-        this.flightCount = data.flightCount;
+        // The new service does not support filtering by height directly on the summary endpoint.
+        // We will filter by date. The height parameter is currently unused with the new service.
+        const data = await client.flightSummary.getCount({
+          flight_datetime_from: `${this.startDate}T00:00:00`,
+          flight_datetime_to: `${this.endDate}T23:59:59`,
+          airports: 'MAN',
+        });
+        this.flightCount = data.record_count;
+
+        const allFlights = await client.flightSummary.getLight({
+          flight_datetime_from: `${this.startDate}T00:00:00`,
+          flight_datetime_to: `${this.endDate}T23:59:59`,
+          airports: 'MAN',
+        });
+
+        allFlights.data.forEach((d) => {
+          d.flight;
+        });
+
+        // const flightsInBounds = await client.historic.flightPositions.getLight({
+        //   timestamp????
+        //   altitudeRanges
+        // })
+
+        //  max 15
+        // const flightEvents = await client.historic.flightEvents.getLight({
+        //   flight_ids:
+        // })
       } catch (err) {
         this.error = err instanceof Error ? err.message : 'An unknown error occurred.';
         console.error('Error fetching flight summary:', err);
