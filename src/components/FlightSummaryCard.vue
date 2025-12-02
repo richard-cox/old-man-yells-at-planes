@@ -41,7 +41,7 @@ defineProps<Props>();
 </template>
 
 <style lang="scss" scoped>
-@import '@/assets/styles/_variables.scss';
+@use '@/assets/styles/_variables.scss' as *;
 
 .flight-summary-card {
   text-align: center;

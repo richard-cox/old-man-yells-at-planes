@@ -65,7 +65,7 @@ const handleFetchData = () => {
 </template>
 
 <style lang="scss" scoped>
-@import '@/assets/styles/_variables.scss';
+@use '@/assets/styles/_variables.scss' as *;
 
 .app-container {
   display: flex;

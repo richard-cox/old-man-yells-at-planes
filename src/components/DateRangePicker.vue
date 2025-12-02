@@ -42,7 +42,7 @@ const updateEndDate = (event: Event) => {
 </template>
 
 <style lang="scss" scoped>
-@import '@/assets/styles/_variables.scss';
+@use '@/assets/styles/_variables.scss' as *;
 
 .date-range-picker {
   display: flex;

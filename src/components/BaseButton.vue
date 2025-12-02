@@ -16,7 +16,8 @@ withDefaults(defineProps<Props>(), {
 </template>
 
 <style lang="scss" scoped>
-@import '@/assets/styles/_variables.scss';
+@use '@/assets/styles/_variables.scss' as *;
+@use 'sass:color';
 
 .base-button {
   background-color: $accent-color;
@@ -40,7 +41,7 @@ withDefaults(defineProps<Props>(), {
   }
 
   &:disabled {
-    background-color: lighten($accent-color, 15%);
+    background-color: color.adjust($accent-color, $lightness: 15%);
     cursor: not-allowed;
     opacity: 0.7;
   }
