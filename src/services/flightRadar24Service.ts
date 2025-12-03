@@ -322,6 +322,8 @@ Examples: B38M,B738
 
 class BaseService {
   protected client: AxiosInstance;
+  // Array to store timestamps of API calls
+  private static apiCallTimestamps: number[] = [];
 
   constructor(apiToken: string) {
     this.client = axios.create({
@@ -332,55 +334,72 @@ class BaseService {
         Accept: 'application/json',
       },
     });
+
+    // Add a request interceptor to log calls
+    this.client.interceptors.request.use((config) => {
+      const now = Date.now();
+      BaseService.apiCallTimestamps.push(now);
+      return config;
+    });
   }
 
-  protected async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  protected async clientGet<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
     const response = await this.client.get<T>(url, config);
     return response.data;
   }
 }
 
+/**
+ * Returns the number of API calls made in the last minute.
+ * This function is exported to be used by other parts of the application.
+ */
+export function getApiCallsInLastMinute(): number {
+  const now = Date.now();
+  const oneMinuteAgo = now - 60 * 1000;
+  return BaseService['apiCallTimestamps'].filter((ts) => ts > oneMinuteAgo).length;
+}
+
 class StaticService extends BaseService {
   public airlines = {
-    getLight: (params: { icao: string }) => this.get<AirlineLight>(`/api/static/airlines/${params.icao}/light`),
+    getLight: (params: { icao: string }) => this.clientGet<AirlineLight>(`/api/static/airlines/${params.icao}/light`),
   };
 
   public airports = {
-    getFull: (params: { code: string }) => this.get<AirportFull>(`/api/static/airports/${params.code}/full`),
-    getLight: (params: { code: string }) => this.get<AirportLight>(`/api/static/airports/${params.code}/light`),
+    getFull: (params: { code: string }) => this.clientGet<AirportFull>(`/api/static/airports/${params.code}/full`),
+    getLight: (params: { code: string }) => this.clientGet<AirportLight>(`/api/static/airports/${params.code}/light`),
   };
 }
 
 class LiveService extends BaseService {
   public flightPositions = {
     getFull: (params: FlightPositionsParams) =>
-      this.get<{ data: FlightPositionsFull[] }>('/api/live/flight-positions/full', { params }),
+      this.clientGet<{ data: FlightPositionsFull[] }>('/api/live/flight-positions/full', { params }),
     getLight: (params: FlightPositionsParams) =>
-      this.get<{ data: FlightPositionsLight[] }>('/api/live/flight-positions/light', { params }),
-    getCount: (params: FlightPositionsParams) => this.get<Count>('/api/live/flight-positions/count', { params }),
+      this.clientGet<{ data: FlightPositionsLight[] }>('/api/live/flight-positions/light', { params }),
+    getCount: (params: FlightPositionsParams) => this.clientGet<Count>('/api/live/flight-positions/count', { params }),
   };
 }
 
 class HistoricService extends BaseService {
   public flightPositions = {
     getFull: (params: HistoricFlightPositionsParams) =>
-      this.get<{ data: FlightPositionsFull[] }>('/api/historic/flight-positions/full', { params }),
+      this.clientGet<{ data: FlightPositionsFull[] }>('/api/historic/flight-positions/full', { params }),
     getLight: (params: HistoricFlightPositionsParams) =>
-      this.get<{ data: FlightPositionsLight[] }>('/api/historic/flight-positions/light', { params }),
+      this.clientGet<{ data: FlightPositionsLight[] }>('/api/historic/flight-positions/light', { params }),
     getCount: (params: HistoricFlightPositionsParams) =>
-      this.get<Count>('/api/historic/flight-positions/count', { params }),
+      this.clientGet<Count>('/api/historic/flight-positions/count', { params }),
   };
 
   public flightEvents = {
     getFull: (params: FlightEventsParams) =>
-      this.get<{ data: HistoricFlightEventsFull[] }>('/api/historic/flight-events/full', {
+      this.clientGet<{ data: HistoricFlightEventsFull[] }>('/api/historic/flight-events/full', {
         params: {
           ...params,
           event_types: params.event_types.join(','),
         },
       }),
     getLight: (params: FlightEventsParams) =>
-      this.get<{ data: HistoricFlightEventsLight[] }>('/api/historic/flight-events/light', {
+      this.clientGet<{ data: HistoricFlightEventsLight[] }>('/api/historic/flight-events/light', {
         params: {
           ...params,
           event_types: params.event_types.join(','),
@@ -390,28 +409,28 @@ class HistoricService extends BaseService {
 }
 
 class FlightSummaryService extends BaseService {
-  getFull(params: FlightSummaryParams) {
-    return this.get<{ data: FlightSummaryFull[] }>('/api/flight-summary/full', { params });
+  get(params: FlightSummaryParams) {
+    return this.clientGet<{ data: FlightSummaryFull[] }>('/api/flight-summary/full', { params });
   }
 
   getLight(params: FlightSummaryParams) {
-    return this.get<{ data: FlightSummaryLight[] }>('/api/flight-summary/light', { params });
+    return this.clientGet<{ data: FlightSummaryLight[] }>('/api/flight-summary/light', { params });
   }
 
   getCount(params: FlightSummaryParams) {
-    return this.get<Count>('/api/flight-summary/count', { params });
+    return this.clientGet<Count>('/api/flight-summary/count', { params });
   }
 }
 
 class FlightTracksService extends BaseService {
   get(params: { flight_id: string }) {
-    return this.get<FlightTracks>('/api/flight-tracks', { params });
+    return this.clientGet<FlightTracks>('/api/flight-tracks', { params });
   }
 }
 
 class UsageService extends BaseService {
   get(params?: { period?: '24h' | '7d' | '30d' | '1y' }) {
-    return this.get<{ data: UsageLogSummary[] }>('/api/usage', { params });
+    return this.clientGet<{ data: UsageLogSummary[] }>('/api/usage', { params });
   }
 }
 

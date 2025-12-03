@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { FlightRadar24Client } from '../services/flightRadar24Service';
+import { FlightRadar24Client, getApiCallsInLastMinute, UsageLogSummary } from '../services/flightRadar24Service';
 
 interface FlightState {
   startDate: string;
@@ -8,11 +8,14 @@ interface FlightState {
   flightCount: number | null;
   isLoading: boolean;
   error: string | null;
+  apiUsage: UsageLogSummary[] | null;
+  apiCallCounter: number;
+  client: FlightRadar24Client | null;
 }
 
 const {
-  // VITE_FR24_API_TOKEN: VITE_FR24_API_TOKEN_SANDBOX,
-  VITE_FR24_API_TOKEN: FR24_API_TOKEN,
+  VITE_FR24_API_TOKEN_SANDBOX: FR24_API_TOKEN,
+  // VITE_FR24_API_TOKEN: FR24_API_TOKEN,
   VITE_BASE_LAT: HARDCODED_LAT,
   VITE_BASE_LONG: HARDCODED_LON,
 } = import.meta.env;
@@ -20,7 +23,6 @@ const {
 // const FR24_API_TOKEN = import.meta.env.VITE_FR24_API_TOKEN;
 // const HARDCODED_LAT = import.meta.env.VITE_BASE_LAT;
 // const HARDCODED_LON = import.meta.env.VITE_BASE_LONG;
-const client = new FlightRadar24Client(FR24_API_TOKEN);
 
 /**
  * Calculates the distance between two GPS coordinates in meters using the Haversine formula.
@@ -78,9 +80,39 @@ export const useFlightStore = defineStore('flight', {
     height: 10000, // Default height in feet
     flightCount: null,
     isLoading: false,
+    apiUsage: null,
     error: null,
+    apiCallCounter: 0,
+    client: null,
   }),
+  getters: {
+    /**
+     * Returns the number of API calls made in the last minute.
+     */
+    apiCallsInLastMinute(): number {
+      // Depend on apiCallCounter to become reactive
+      this.apiCallCounter;
+      return getApiCallsInLastMinute();
+    },
+  },
   actions: {
+    initialiseClient() {
+      this.client = new FlightRadar24Client(FR24_API_TOKEN);
+    },
+
+    async fetchAPIUsage() {
+      try {
+        const usage = await this.client.usage.get({
+          period: '30d',
+        });
+        this.apiUsage = usage.data;
+        this.apiCallCounter++;
+      } catch (err) {
+        console.error('Error fetching API usage:', err);
+        // Optionally set an error state for API usage
+      }
+    },
+
     async fetchFlightSummary() {
       this.isLoading = true;
       this.error = null;
@@ -123,13 +155,14 @@ export const useFlightStore = defineStore('flight', {
 
         // console.warn('flightEvents: ', 'allFlightsCounts', allFlightsCounts);
 
-        const allFlights = await client.flightSummary.getLight({
+        const allFlights = await this.client.flightSummary.getLight({
           flight_datetime_from: `${this.startDate}T00:00:00`,
           flight_datetime_to: `${this.endDate}T23:59:59`,
           airports: 'MAN',
           limit: 15, // TODO: RC  ????
         });
 
+        this.apiCallCounter++;
         console.warn('flightEvents: ', 'allFlights', allFlights);
 
         const flights = allFlights.data.map((d) => d.fr24_id);
@@ -138,11 +171,12 @@ export const useFlightStore = defineStore('flight', {
           throw new Error('TODO: RC max 15');
         }
 
-        const flightEvents = await client.historic.flightEvents.getLight({
+        const flightEvents = await this.client.historic.flightEvents.getLight({
           flight_ids: flights.join(','),
           event_types: ['cruising', 'descent'],
         });
 
+        this.apiCallCounter++;
         console.warn('flightEvents: ', 'flightEvents', flightEvents);
 
         const flightsUnderHeight = flightEvents.data.filter((event) => {
