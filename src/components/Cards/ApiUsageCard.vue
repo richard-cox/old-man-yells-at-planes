@@ -1,12 +1,27 @@
+<script setup lang="ts">
+import { storeToRefs } from 'pinia';
+import { useFlightStore } from '@/stores/flightStore';
+
+const flightStore = useFlightStore();
+const { apiCallsInLastMinute, apiUsage } = storeToRefs(flightStore);
+
+</script>
+
 <template>
   <div class="api-usage-card">
-    <h2 class="card-title">API Usage</h2>
+    <div class="card-header">
+      <h2 class="card-title">API Usage</h2>
+    </div>
     <div class="usage-item">
       <div class="usage-item-row">
         <span class="label">Calls (last min):</span>
-        <strong :class="{ 'high-usage': callsInLastMinute >= 10 }">{{ callsInLastMinute }}</strong>
+        <strong :class="{ 'high-usage': apiCallsInLastMinute >= 10 }">{{ apiCallsInLastMinute }}</strong>
       </div>
-      <div v-for="usage in apiUsage" :key="usage.endpoint" class="usage-item-row">
+      <div class="refresh-row">
+        <h3 class="sub-header">Calls (all)</h3>
+        <button @click="flightStore.fetchAPIUsage()" class="refresh-button">Refresh</button>
+      </div>
+      <div v-for="usage in apiUsage?.data" :key="usage.endpoint" class="usage-item-row">
         <span class="label">{{ usage.endpoint }}</span>
         <div class="endpoint-stats">
           <span>
@@ -22,15 +37,6 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { UsageLogSummary } from '../services/flightRadar24Service';
-
-defineProps<{
-  callsInLastMinute: number;
-  apiUsage: UsageLogSummary[] | null;
-}>();
-</script>
-
 <style lang="scss" scoped>
 @use '@/assets/styles/_variables.scss' as *;
 
@@ -45,12 +51,18 @@ defineProps<{
   color: $text-color-primary;
 }
 
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
 .card-title {
   margin-top: 0;
-  margin-bottom: $spacing-md;
+  margin-bottom: 0;
   font-size: 1.5rem;
   color: $accent-color;
-  text-align: center;
 }
 
 .usage-item {
@@ -85,9 +97,36 @@ defineProps<{
   gap: $spacing-md;
 }
 
+.refresh-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sub-header {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: normal;
+  color: $text-color-secondary;
+}
+
 .loading-state {
   text-align: center;
   color: $text-color-secondary;
   padding: $spacing-md 0;
+}
+
+.refresh-button {
+  background-color: $accent-color;
+  color: white;
+  border: none;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $border-radius-md;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: darken($accent-color, 10%);
+  }
 }
 </style>

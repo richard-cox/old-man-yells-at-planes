@@ -1,16 +1,25 @@
 import { defineStore } from 'pinia';
-import { FlightRadar24Client, getApiCallsInLastMinute, UsageLogSummary } from '../services/flightRadar24Service';
+import {
+  FlightRadar24Client,
+  getApiCallsInLastMinute,
+  UsageLogSummary,
+  apiCallTracker,
+} from '../services/flightRadar24Service';
+
+interface AsyncData<T> {
+  data: T | null;
+  isLoading: boolean;
+  error: string | null;
+}
 
 interface FlightState {
   startDate: string;
   endDate: string;
   height: number;
-  flightCount: number | null;
-  isLoading: boolean;
-  error: string | null;
-  apiUsage: UsageLogSummary[] | null;
-  apiCallCounter: number;
+  flightSummary: AsyncData<number>;
+  apiUsage: AsyncData<UsageLogSummary[]>;
   client: FlightRadar24Client | null;
+  _ticker: number;
 }
 
 const {
@@ -78,60 +87,77 @@ export const useFlightStore = defineStore('flight', {
     startDate: '', // YYYY-MM-DD format
     endDate: '', // YYYY-MM-DD format
     height: 10000, // Default height in feet
-    flightCount: null,
-    isLoading: false,
-    apiUsage: null,
-    error: null,
-    apiCallCounter: 0,
     client: null,
+    flightSummary: {
+      data: null,
+      isLoading: false,
+      error: null,
+    },
+    apiUsage: {
+      data: null,
+      isLoading: false,
+      error: null,
+    },
+    _ticker: 0,
   }),
   getters: {
     /**
      * Returns the number of API calls made in the last minute.
      */
     apiCallsInLastMinute(): number {
-      // Depend on apiCallCounter to become reactive
-      this.apiCallCounter;
+      // Depend on the ticker and the reactive tracker to ensure this getter updates
+      // TODO: RC this is all sorts of horrible
+      this._ticker; // Re-evaluates when ticker changes
+      apiCallTracker.count; // Re-evaluates when an API call is made
       return getApiCallsInLastMinute();
     },
   },
   actions: {
+    startApiCallPolling() {
+      setInterval(() => {
+        this._ticker++;
+      }, 10000); // Update every 10 seconds
+    },
+
     initialiseClient() {
       this.client = new FlightRadar24Client(FR24_API_TOKEN);
     },
 
     async fetchAPIUsage() {
+      this.apiUsage.isLoading = true;
+      this.apiUsage.error = null;
       try {
         const usage = await this.client.usage.get({
           period: '30d',
         });
-        this.apiUsage = usage.data;
-        this.apiCallCounter++;
+        this.apiUsage.data = usage.data;
       } catch (err) {
+        this.apiUsage.error = err instanceof Error ? err.message : 'An unknown error occurred.';
         console.error('Error fetching API usage:', err);
-        // Optionally set an error state for API usage
+      } finally {
+        this.apiUsage.isLoading = false;
       }
     },
 
     async fetchFlightSummary() {
-      this.isLoading = true;
-      this.error = null;
-      this.flightCount = null; // Clear previous data
+      this.flightSummary.isLoading = true;
+      this.flightSummary.error = null;
+      this.flightSummary.data = null; // Clear previous data
 
       // Basic validation
       if (!this.startDate || !this.endDate) {
-        this.error = 'Please select both start and end dates.';
-        this.isLoading = false;
+        this.flightSummary.error = 'Please select both start and end dates.';
+        this.flightSummary.isLoading = false;
         return;
       }
       if (new Date(this.startDate) > new Date(this.endDate)) {
-        this.error = 'Start date cannot be after end date.';
-        this.isLoading = false;
+        this.flightSummary.error = 'Start date cannot be after end date.';
+        this.flightSummary.isLoading = false;
         return;
       }
       if (this.height < 0) {
-        this.error = 'Height cannot be negative.';
-        this.isLoading = false;
+        this.flightSummary.error = 'Height cannot be negative.';
+        this.flightSummary.isLoading = false;
         return;
       }
 
@@ -162,7 +188,6 @@ export const useFlightStore = defineStore('flight', {
           limit: 15, // TODO: RC  ????
         });
 
-        this.apiCallCounter++;
         console.warn('flightEvents: ', 'allFlights', allFlights);
 
         const flights = allFlights.data.map((d) => d.fr24_id);
@@ -176,7 +201,6 @@ export const useFlightStore = defineStore('flight', {
           event_types: ['cruising', 'descent'],
         });
 
-        this.apiCallCounter++;
         console.warn('flightEvents: ', 'flightEvents', flightEvents);
 
         const flightsUnderHeight = flightEvents.data.filter((event) => {
@@ -200,7 +224,7 @@ export const useFlightStore = defineStore('flight', {
 
         console.warn('flightEvents: ', 'flightsUnderHeight', flightsUnderHeight);
 
-        this.flightCount = flightsUnderHeight.length;
+        this.flightSummary.data = flightsUnderHeight.length;
 
         // const flightsInBounds = flightsUnderHeight.filter((event) => {
         //   return event.events.filter((e) => {
@@ -212,10 +236,10 @@ export const useFlightStore = defineStore('flight', {
 
         // console.warn('flightEvents: ', 'flightsInBounds', flightsInBounds);
       } catch (err) {
-        this.error = err instanceof Error ? err.message : 'An unknown error occurred.';
+        this.flightSummary.error = err instanceof Error ? err.message : 'An unknown error occurred.';
         console.error('Error fetching flight summary:', err);
       } finally {
-        this.isLoading = false;
+        this.flightSummary.isLoading = false;
       }
     },
   },

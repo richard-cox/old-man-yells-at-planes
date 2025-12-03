@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import { reactive } from 'vue';
 
 const BASE_URL = 'https://fr24api.flightradar24.com';
 const API_VERSION = 'v1';
@@ -320,6 +321,11 @@ Examples: B38M,B738
 
 //#endregion
 
+/**
+ * A reactive object to track API calls application-wide.
+ */
+export const apiCallTracker = reactive({ count: 0 });
+
 class BaseService {
   protected client: AxiosInstance;
   // Array to store timestamps of API calls
@@ -339,6 +345,7 @@ class BaseService {
     this.client.interceptors.request.use((config) => {
       const now = Date.now();
       BaseService.apiCallTimestamps.push(now);
+      apiCallTracker.count++; // Increment the reactive counter // TODO: RC shouldn't be ref, call update in store
       return config;
     });
   }

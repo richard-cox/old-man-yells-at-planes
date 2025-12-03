@@ -1,17 +1,15 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import { storeToRefs } from 'pinia';
 import { useFlightStore } from '@/stores/flightStore';
-import ApiUsageCard from '@/components/ApiUsageCard.vue';
-import FlightSummaryCard from '@/components/FlightSummaryCard.vue';
-import FlightOptionsCard from '@/components/FlightOptionsCard.vue';
+import ApiUsageCard from '@/components/Cards/ApiUsageCard.vue';
+import FlightLargeTimespanCard from '@/components/Cards/FlightLargeTimespanCard.vue';
 
 const flightStore = useFlightStore();
-const { apiCallsInLastMinute, apiUsage } = storeToRefs(flightStore);
 
 // Set initial date range to last 7 days
 onMounted(() => {
   flightStore.initialiseClient();
+  flightStore.startApiCallPolling();
 
   const today = new Date();
   const sevenDaysAgo = new Date(today);
@@ -26,19 +24,9 @@ onMounted(() => {
 <template>
   <div class="app-container">
     <h1 class="app-title">Flight Summary</h1>
+    <FlightLargeTimespanCard />
 
-    <FlightOptionsCard />
-
-    <FlightSummaryCard
-      :start-date="flightStore.startDate"
-      :end-date="flightStore.endDate"
-      :height="flightStore.height"
-      :flight-count="flightStore.flightCount"
-      :is-loading="flightStore.isLoading"
-      :error="flightStore.error"
-    />
-
-    <ApiUsageCard :calls-in-last-minute="apiCallsInLastMinute" :api-usage="apiUsage" />
+    <ApiUsageCard />
   </div>
 </template>
 
