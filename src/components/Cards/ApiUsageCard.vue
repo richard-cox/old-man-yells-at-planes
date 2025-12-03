@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
 import { useFlightStore } from '@/stores/flightStore';
+import BaseButton from '@/components/BaseButton.vue';
 
 const flightStore = useFlightStore();
 const { apiCallsInLastMinute, apiUsage } = storeToRefs(flightStore);
@@ -19,18 +20,27 @@ const { apiCallsInLastMinute, apiUsage } = storeToRefs(flightStore);
       </div>
       <div class="refresh-row">
         <h3 class="sub-header">Calls (all)</h3>
-        <button @click="flightStore.fetchAPIUsage()" class="refresh-button">Refresh</button>
+        <BaseButton @click="flightStore.fetchAPIUsage()">Refresh</BaseButton>
       </div>
-      <div v-for="usage in apiUsage?.data" :key="usage.endpoint" class="usage-item-row">
-        <span class="label">{{ usage.endpoint }}</span>
-        <div class="endpoint-stats">
-          <span>
-            Requests: <strong>{{ usage.request_count }}</strong>
-          </span>
-          <span>
-            Credits: <strong>{{ usage.credits }}</strong>
-          </span>
+      <div class="usage-details-container">
+        <div v-if="apiUsage.isLoading" class="loading-state">Loading API usage...</div>
+        <div v-else-if="apiUsage?.error" class="error-state">
+          <p>Failed to load API usage data.</p>
+          <p><strong>{{ apiUsage.error }}</strong></p>
         </div>
+        <template v-else>
+          <div v-for="usage in apiUsage?.data" :key="usage.endpoint" class="usage-item-row">
+            <span class="label">{{ usage.endpoint }}</span>
+            <div class="endpoint-stats">
+              <span>
+                Requests: <strong>{{ usage.request_count }}</strong>
+              </span>
+              <span>
+                Credits: <strong>{{ usage.credits }}</strong>
+              </span>
+            </div>
+          </div>
+        </template>
       </div>
     </div>
    
@@ -39,6 +49,7 @@ const { apiCallsInLastMinute, apiUsage } = storeToRefs(flightStore);
 
 <style lang="scss" scoped>
 @use '@/assets/styles/_variables.scss' as *;
+@use 'sass:color';
 
 .api-usage-card {
   background-color: $card-background-color;
@@ -76,7 +87,8 @@ const { apiCallsInLastMinute, apiUsage } = storeToRefs(flightStore);
   display: flex;
   justify-content: space-between;
   padding: $spacing-sm;
-  background-color: darken($card-background-color, 5%);
+  
+  background-color: color.adjust($card-background-color, $lightness: -5%);
   border-radius: $border-radius-md;
 
   .label {
@@ -94,6 +106,13 @@ const { apiCallsInLastMinute, apiUsage } = storeToRefs(flightStore);
 
 .endpoint-stats {
   display: flex;
+  gap: $spacing-md;
+}
+
+.usage-details-container {
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
   gap: $spacing-md;
 }
 
@@ -116,17 +135,12 @@ const { apiCallsInLastMinute, apiUsage } = storeToRefs(flightStore);
   padding: $spacing-md 0;
 }
 
-.refresh-button {
-  background-color: $accent-color;
-  color: white;
-  border: none;
-  padding: $spacing-sm $spacing-md;
+.error-state {
+  text-align: center;
+  color: $text-color-error;
+  padding: $spacing-md;
+  background-color: color.adjust($text-color-error, $lightness: 40%);
   border-radius: $border-radius-md;
-  cursor: pointer;
-  transition: background-color 0.2s;
-
-  &:hover {
-    background-color: darken($accent-color, 10%);
-  }
+  border: 1px solid color.adjust($text-color-error, $lightness: 20%);
 }
 </style>

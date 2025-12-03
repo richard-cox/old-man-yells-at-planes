@@ -10,14 +10,6 @@ const flightStore = useFlightStore();
 onMounted(() => {
   flightStore.initialiseClient();
   flightStore.startApiCallPolling();
-
-  const today = new Date();
-  const sevenDaysAgo = new Date(today);
-  sevenDaysAgo.setDate(today.getDate() - 7);
-
-  flightStore.startDate = sevenDaysAgo.toISOString().split('T')[0];
-  flightStore.endDate = today.toISOString().split('T')[0];
-  flightStore.fetchAPIUsage();
 });
 </script>
 

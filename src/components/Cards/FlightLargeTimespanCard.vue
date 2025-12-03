@@ -3,12 +3,24 @@ import { useFlightStore } from '@/stores/flightStore';
 import DateRangePicker from '@/components/DateRangePicker.vue';
 import HeightInput from '@/components/HeightInput.vue';
 import BaseButton from '@/components/BaseButton.vue';
+import { onMounted } from 'vue';
 
 const flightStore = useFlightStore();
 
 const handleFetchData = () => {
   flightStore.fetchFlightSummary();
 };
+
+// Set initial date range to last 7 days
+onMounted(() => {
+  const today = new Date();
+  const sevenDaysAgo = new Date(today);
+  sevenDaysAgo.setDate(today.getDate() - 7);
+
+  flightStore.startDate = sevenDaysAgo.toISOString().split('T')[0];
+  flightStore.endDate = today.toISOString().split('T')[0];
+});
+
 </script>
 
 <template>
