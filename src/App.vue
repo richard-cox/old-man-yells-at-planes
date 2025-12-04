@@ -4,13 +4,14 @@ import { useFlightStore } from '@/stores/flightStore';
 import ApiUsageCard from '@/components/Cards/ApiUsageCard.vue';
 import RecentFlightsCard from '@/components/Cards/RecentFlightsCard.vue';
 import FlightLargeTimespanCard from '@/components/Cards/FlightLargeTimespanCard.vue';
+import LiveFlightsCard from '@/components/Cards/LiveFlightsCard.vue';
 
 const flightStore = useFlightStore();
 
 // Set initial date range to last 7 days
 onMounted(() => {
   flightStore.initialiseClient();
-  flightStore.startApiCallPolling();
+  flightStore.startApiCallPolling(); // TODO: RC tidy
 });
 </script>
 
@@ -19,7 +20,7 @@ onMounted(() => {
     <h1 class="app-title">Flight Summary</h1>
     <FlightLargeTimespanCard />
     <RecentFlightsCard />
-
+    <LiveFlightsCard />
     <ApiUsageCard />
   </div>
 </template>

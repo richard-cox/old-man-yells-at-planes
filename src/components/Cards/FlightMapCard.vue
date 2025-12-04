@@ -4,8 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import { LMap, LTileLayer, LCircleMarker, LPopup } from '@vue-leaflet/vue-leaflet';
 import L from 'leaflet';
 
-// Local airport data for ICAO code conversion.
-import airportData from '@/data/airports.json';
+
 
 // This is a workaround for a known issue with leaflet and bundlers like Vite.
 // It ensures that the default marker icons are loaded correctly.
@@ -24,32 +23,32 @@ try {
   console.error('Could not load leaflet marker icons', e);
 }
 
+
 const props = defineProps<{
   flights: FlightEventPointForMap[] | null | undefined;
 }>();
 
-// Create a Map for efficient ICAO code lookups.
-const airportNameMap = new Map<string, string>(Object.entries(airportData));
 
-const flightPoints = computed<FlightEventPointForMap[]>(() => {
-  return (
-    props.flights
-      ?.flatMap((flight) =>
-        flight.events
-          .filter((event) => event.lat && event.lon)
-          .map((event) => ({
-            lat: event.lat!,
-            lon: event.lon!,
+// const flightPoints = computed<FlightEventPointForMap[]>(() => {
+//   return (
+//     props.flights
+//       ?.flatMap((flight) =>
+//         flight.events
+//           .filter((event) => event.lat && event.lon)
+//           .map((event) => ({
+//             lat: event.lat!,
+//             lon: event.lon!,
+//             alt: event.alt,
 
-            callsign: flight.callsign,
-            orig: airportNameMap.get(flight.orig_icao) || 'Unknown',
-            dest: airportNameMap.get(flight.dest_icao_actual) || 'Unknown',
-            type: event.type,
-            alt: event.alt
-          }))
-      ) || []
-  );
-});
+//             type: event.type, // only on event not others
+
+//             callsign: flight.callsign,
+//             orig: airportNameMap.get(flight.orig_icao) || 'Unknown',
+//             dest: airportNameMap.get(flight.dest_icao_actual) || 'Unknown',
+//           }))
+//       ) || []
+//   );
+// });
 
 // Using the hardcoded lat/lon from the store's env vars would be better,
 // but they aren't exported. This is a close approximation of Manchester.
@@ -58,7 +57,10 @@ const center = [53.3833, -2.2333]; // Manchester
 
 <template>
   <div class="flight-map-card">
-    <div v-if="flightPoints.length > 0" style="height: 500px; width: 100%">
+
+  <br>{{JSON.stringify(flights)}}<br>
+  <br>{{flights?.length}}<br>
+    <div v-if="flights?.length > 0" style="height: 500px; width: 100%">
       <l-map ref="map" :zoom="8" :center="center">
         <l-tile-layer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -67,7 +69,7 @@ const center = [53.3833, -2.2333]; // Manchester
           attribution="&copy; <a href='http://www.openstreetmap.org/copyright'>OpenStreetMap</a>"
         ></l-tile-layer>
         <l-circle-marker
-          v-for="(point, index) in flightPoints"
+          v-for="(point, index) in flights"
           :key="index"
           :lat-lng="[point.lat, point.lon]"
           :radius="6"
@@ -79,7 +81,7 @@ const center = [53.3833, -2.2333]; // Manchester
             <b>Altitude:</b> {{ point.alt }}<br />
             <b>Orig:</b> {{ point.orig }}<br />
             <b>Dest:</b> {{ point.dest }}<br />
-            <b>Event Type:</b> {{ point.type }}
+            <template v-if="point.type"> <b>Event Type:</b> {{ point.type }}</template>
           </l-popup>
         </l-circle-marker>
       </l-map>

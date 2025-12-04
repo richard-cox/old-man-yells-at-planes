@@ -4,7 +4,13 @@ import {
   getApiCallsInLastMinute,
   UsageLogSummary,
   apiCallTracker,
+  HistoricFlightEventsLight,
+  FlightSummaryLight,
+  HistoricFlightEvent,
+  FlightTrackPoint,
 } from '../services/flightRadar24Service';
+// Local airport data for ICAO code conversion.
+import airportData from '@/data/airports.json';
 
 interface AsyncData<T> {
   data: T | null;
@@ -19,54 +25,38 @@ interface FlightState {
   height: number;
   flightSummary: AsyncData<number>;
   apiUsage: AsyncData<UsageLogSummary[]>;
-  client: FlightRadar24Client | null;
+  // client: FlightRadar24Client | null;
   _ticker: number;
   recentHours: number;
   recentHeight: number;
   recentFlights: AsyncData<number>;
+  liveFlights: AsyncData<number>;
+  liveAltitude: number;
+  livePollingInterval: number | null;
+  _livePollingTickerId: number | null;
 }
 
-interface Flight {
-  callsign: string;
-  datetime_landed: string;
-  datetime_takeoff: string;
-  dest_icao: string;
-  dest_icao_actual: string;
-  first_seen: string;
-  flight: string;
-  flight_ended: boolean;
-  fr24_id: string;
-  hex: string;
-  last_seen: string;
-  operating_as: string;
-  orig_icao: string;
-  painted_as: string;
-  reg: string;
-  type: string;
-}
+// type FlightEventPointForMap = FlightSummaryLight & {
+//   events: HistoricFlightEvent[];
+// };
 
-interface FlightEvent {
-  callsign: string;
-  fr24_id: string;
-  hex: string;
-  events: FlightEventPoint[];
-}
-
-interface FlightEventPoint {
-  type: string;
-  alt?: number;
-  lat?: number;
-  lon?: number;
-  [key: string]: any;
-}
-
-type FlightEventPointForMap = Flight & {
-  events: FlightEventPoint[];
-};
+// type LiveFlightPointForMap = FlightSummaryLight & FlightTrackPoint;
 
 export interface FlightWithEvents {
   flight_id: string;
-  events: FlightEventPoint[];
+  events: HistoricFlightEvent[];
+}
+
+export interface FlightEventPointForMap {
+  lat: number | null;
+  lon: number | null;
+  alt: number | null;
+
+  type?: string; // only on event not others
+
+  callsign: string | null;
+  orig: string;
+  dest: string;
 }
 
 const {
@@ -75,10 +65,6 @@ const {
   VITE_BASE_LAT: HARDCODED_LAT,
   VITE_BASE_LONG: HARDCODED_LON,
 } = import.meta.env;
-
-// const FR24_API_TOKEN = import.meta.env.VITE_FR24_API_TOKEN;
-// const HARDCODED_LAT = import.meta.env.VITE_BASE_LAT;
-// const HARDCODED_LON = import.meta.env.VITE_BASE_LONG;
 
 /**
  * Calculates the distance between two GPS coordinates in meters using the Haversine formula.
@@ -129,34 +115,67 @@ const isInBounds = (lat: number, lon: number): boolean => {
   }
 };
 
+/**
+ * Calculates a bounding box string (north,south,west,east) centered at a given
+ * latitude and longitude, with specified deltas.
+ *
+ * @param center_lat The center latitude.
+ * @param center_lon The center longitude.
+ * @param lat_delta The delta to add/subtract from the center latitude (default is 1.0).
+ * @param lon_delta The delta to add/subtract from the center longitude (default is 1.0).
+ * @returns A string in the format "north,south,west,east".
+ */
+const makeBounds = (
+  center_lat: number,
+  center_lon: number,
+  lat_delta: number = 1.0,
+  lon_delta: number = 1.0
+): string => {
+  const north: number = center_lat + lat_delta;
+  const south: number = center_lat - lat_delta;
+  const west: number = center_lon - lon_delta;
+  const east: number = center_lon + lon_delta;
+
+  // The API expects: "north,south,west,east"
+  return `${north},${south},${west},${east}`;
+};
+
+if (!HARDCODED_LAT || !HARDCODED_LON) {
+  throw new Error('Missing base location env vars');
+}
+const myBounds = makeBounds(HARDCODED_LAT, HARDCODED_LON); // TODO: RC delta needs to be SMALLER
+
+const emptyAsync = <T = any>(): AsyncData<T> => ({
+  data: null,
+  points: null,
+  isLoading: false,
+  error: null,
+});
+
+const client = new FlightRadar24Client(FR24_API_TOKEN);
+
+// Create a Map for efficient ICAO code lookups.
+const airportNameMap = new Map<string, string>(Object.entries(airportData));
+const getAirportString = (icao: string | null): string => {
+  return `${airportNameMap.get(icao || '') || 'Unknown'} (${icao})`;
+};
+
 export const useFlightStore = defineStore('flight', {
   state: (): FlightState => ({
     startDate: '', // YYYY-MM-DD format
     endDate: '', // YYYY-MM-DD format
     height: 10000, // Default height in feet
-    client: null,
-    flightSummary: {
-      data: null,
-      points: null,
-      isLoading: false,
-      error: null,
-    },
-    apiUsage: {
-      data: null,
-      points: null,
-      isLoading: false,
-      error: null,
-    },
+    flightSummary: emptyAsync<number>(),
+    apiUsage: emptyAsync<UsageLogSummary[]>(),
     _ticker: 0,
     // State for RecentFlightsCard
     recentHours: 1,
     recentHeight: 10000,
-    recentFlights: {
-      data: null,
-      points: null,
-      isLoading: false,
-      error: null,
-    },
+    recentFlights: emptyAsync<number>(),
+    liveFlights: emptyAsync<number>(),
+    liveAltitude: 10000,
+    livePollingInterval: null, // 10s, 60s, 300s
+    _livePollingTickerId: null,
   }),
   getters: {
     /**
@@ -177,15 +196,13 @@ export const useFlightStore = defineStore('flight', {
       }, 10000); // Update every 10 seconds
     },
 
-    initialiseClient() {
-      this.client = new FlightRadar24Client(FR24_API_TOKEN);
-    },
+    initialiseClient() {},
 
     async fetchAPIUsage() {
       this.apiUsage.isLoading = true;
       this.apiUsage.error = null;
       try {
-        const usage = await this.client.usage.get({
+        const usage = await client.usage.get({
           period: '30d',
         });
         this.apiUsage.data = usage.data;
@@ -239,7 +256,7 @@ export const useFlightStore = defineStore('flight', {
 
         // console.warn('flightEvents: ', 'allFlightsCounts', allFlightsCounts);
 
-        const allFlights = await this.client.flightSummary.getLight({
+        const allFlights = await client.flightSummary.getLight({
           flight_datetime_from: `${this.startDate}T00:00:00`,
           flight_datetime_to: `${this.endDate}T23:59:59`,
           airports: 'MAN',
@@ -254,7 +271,7 @@ export const useFlightStore = defineStore('flight', {
           throw new Error('TODO: RC max 15');
         }
 
-        const flightEvents = await this.client.historic.flightEvents.getLight({
+        const flightEvents = await client.historic.flightEvents.getLight({
           flight_ids: flights.join(','),
           event_types: ['cruising', 'descent'],
         });
@@ -319,24 +336,28 @@ export const useFlightStore = defineStore('flight', {
         return;
       }
 
+      const recentFlights: AsyncData<number> = emptyAsync<number>();
+
       try {
         const now = new Date();
         const fromDate = new Date(now.getTime() - this.recentHours * 60 * 60 * 1000);
 
-        const allFlightsResp = await this.client.flightSummary.getLight({
+        const allFlightsResp = await client.flightSummary.getLight({
           flight_datetime_from: fromDate.toISOString().split('.')[0],
           flight_datetime_to: now.toISOString().split('.')[0],
           airports: 'outbound:MAN',
           limit: 15, // TODO: RC  max is 20
         });
 
-        const allFlights: Flight[] = allFlightsResp.data;
+        const allFlights: FlightSummaryLight[] = allFlightsResp.data;
 
         console.warn('fetchRecent: ', 'allFlights', allFlights);
 
         if (allFlights.length === 0) {
-          this.recentFlights.data = 0;
-          this.recentFlights.points = [];
+          recentFlights.data = 0;
+          recentFlights.points = [];
+
+          this.recentFlights = recentFlights;
           return;
         }
 
@@ -345,16 +366,18 @@ export const useFlightStore = defineStore('flight', {
         // }
 
         const flights = allFlights.map((d) => d.fr24_id);
-        const flightEventsResp = await this.client.historic.flightEvents.getLight({
+        const flightEventsResp = await client.historic.flightEvents.getLight({
           flight_ids: flights.join(','),
           event_types: ['takeoff', 'airspace_transition', 'cruising', 'descent'],
         });
 
-        const flightEvents: FlightEvent[] = flightEventsResp.data;
+        const flightEvents: HistoricFlightEventsLight[] = flightEventsResp.data;
 
         if (flightEvents.length === 0) {
-          this.recentFlights.data = 0;
-          this.recentFlights.points = [];
+          recentFlights.data = 0;
+          recentFlights.points = [];
+
+          this.recentFlights = recentFlights;
           return;
         }
 
@@ -363,17 +386,33 @@ export const useFlightStore = defineStore('flight', {
             res[f.fr24_id] = f;
             return res;
           },
-          {} as Record<string, Flight>
+          {} as Record<string, FlightSummaryLight>
         );
 
-        this.recentFlights.points = flightEvents.map((event) => {
-          const flight = flightsMapped[event.fr24_id];
+        recentFlights.points = flightEvents
+          .map((event) => {
+            const flight = flightsMapped[event.fr24_id];
 
-          return {
-            ...flight,
-            events: event.events,
-          };
-        });
+            return {
+              ...flight,
+              events: event.events,
+            };
+          })
+          .flatMap((flight) =>
+            flight.events
+              .filter((event) => event.lat && event.lon)
+              .map((event) => ({
+                lat: event.lat!,
+                lon: event.lon!,
+                alt: event.alt,
+
+                type: event.type,
+
+                callsign: flight.callsign,
+                orig: getAirportString(flight.orig_icao),
+                dest: getAirportString(flight.dest_icao),
+              }))
+          );
 
         // gate_departure, takeoff, cruising, airspace_transition, descent, landed, gate_arrival
 
@@ -400,14 +439,105 @@ export const useFlightStore = defineStore('flight', {
 
         console.warn('fetchRecent: ', 'flightsUnderHeight', flightsUnderHeight);
 
-        this.recentFlights.data = flightsUnderHeight.length;
+        recentFlights.data = flightsUnderHeight.length;
       } catch (err) {
-        this.recentFlights.error = err instanceof Error ? err.message : 'An unknown error occurred.';
+        recentFlights.error = err instanceof Error ? err.message : 'An unknown error occurred.';
         console.error('Error fetching recent flights:', err);
       } finally {
-        this.recentFlights.isLoading = false;
+        recentFlights.isLoading = false;
+      }
+
+      this.recentFlights = recentFlights;
+    },
+
+    async fetchBounds() {
+      const liveFlights: AsyncData<number, FlightEventPointForMap> = emptyAsync<number, FlightEventPointForMap>();
+      liveFlights.isLoading = true;
+
+      try {
+        // flights = client.live.flight_positions.get_light(bounds=BOUNDS)
+        //     inside = list(flights_in_circle(flights.data))
+
+        const lifeFlightsResp = await client.live.flightPositions.getLight({
+          bounds: myBounds,
+          airports: 'outbound:MAN',
+          // limit: 15, // TODO: RC  max is 20
+        });
+
+        // TODO: RC filter on bounds
+        // const inBounds = lifeFlightsResp.data.filter((flight) => isInBounds(flight.lat, flight.lon));
+        const inBounds = lifeFlightsResp.data;
+
+        // TODO: RC filter on alt
+        // const inHeight = inBounds.filter((f) => f.alt && f.alt <= this.liveAltitude);
+        const inHeight = inBounds;
+
+        if (inHeight.length === 0) {
+          liveFlights.data = 0;
+          liveFlights.points = [];
+          liveFlights.isLoading = false;
+
+          this.liveFlights = liveFlights;
+          return;
+        }
+
+        const flightsResp = await client.flightSummary.getLight({
+          flight_ids: inHeight.map((f) => f.fr24_id).join(','),
+        });
+
+        const flightsMapped = flightsResp.data.reduce(
+          (res, f) => {
+            res[f.fr24_id] = f;
+            return res;
+          },
+          {} as Record<string, FlightSummaryLight>
+        );
+
+        liveFlights.data = inHeight.length;
+
+        liveFlights.points = inHeight
+          .map((event) => {
+            const flight = flightsMapped[event.fr24_id];
+
+            return {
+              ...flight,
+              ...event,
+            };
+          })
+          .map((flight) => ({
+            lat: flight.lat,
+            lon: flight.lon,
+            alt: flight.alt,
+
+            callsign: flight.callsign,
+            orig: getAirportString(flight.orig_icao),
+            dest: getAirportString(flight.dest_icao),
+          }));
+      } catch (err) {
+        liveFlights.error = err instanceof Error ? err.message : 'An unknown error occurred.';
+        console.error('Error fetching recent flights:', err);
+      } finally {
+        liveFlights.isLoading = false;
+      }
+
+      this.liveFlights = liveFlights;
+    },
+
+    startLivePolling() {
+      this.stopLivePolling();
+      if (this.livePollingInterval && this.livePollingInterval > 0) {
+        this.fetchBounds(); // Initial call
+        this._livePollingTickerId = setInterval(() => {
+          this.fetchBounds();
+        }, this.livePollingInterval * 1000);
+      }
+    },
+
+    stopLivePolling() {
+      if (this._livePollingTickerId) {
+        clearInterval(this._livePollingTickerId);
+        this._livePollingTickerId = null;
       }
     },
   },
-  // Getters can be added here if derived state is needed, e.g., formatted dates
 });
