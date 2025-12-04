@@ -7,7 +7,7 @@ import FlightMapCard from '@/components/Cards/FlightMapCard.vue';
 import { storeToRefs } from 'pinia';
 
 const flightStore = useFlightStore();
-const { recentHeight } = storeToRefs(flightStore);
+const { recentHeight, recentPreciseLocation } = storeToRefs(flightStore);
 
 const handleFetchData = () => {
   flightStore.fetchRecentFlights();
@@ -28,7 +28,7 @@ const hourOptions = [1, 2, 3];
     <div class="card-content">
       <div class="options-section">
         <div class="input-group">
-          <HeightInput v-model:height="flightStore.recentHeight" />
+          <HeightInput v-model:height="recentHeight" />
           <div class="form-control">
             <label for="hours-select">Time Range</label>
             <select id="hours-select" v-model.number="flightStore.recentHours">
@@ -37,7 +37,10 @@ const hourOptions = [1, 2, 3];
               </option>
             </select>
           </div>
-          
+          <div class="checkbox-control">
+            <input id="recent-precise-location" type="checkbox" v-model="recentPreciseLocation" />
+            <label for="recent-precise-location">Filter to precise location</label>
+          </div>
         </div>
 
         <div class="action-area">
@@ -76,37 +79,11 @@ const hourOptions = [1, 2, 3];
 <style lang="scss" scoped>
 @use '@/assets/styles/_variables.scss' as *;
 @use '@/assets/styles/card.scss';
+@use '@/assets/styles/forms.scss';
 
 .recent-flights-card {
   display: flex;
   flex-direction: column;
   gap: $spacing-lg;
-}
-.input-group {
-  > * {
-    min-width: 200px;
-  }
-}
-.form-control {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-xs;
-  text-align: left;
-
-  label {
-    font-weight: bold;
-    color: $text-color-secondary;
-    font-size: $font-size-sm;
-    margin-left: $spacing-xs;
-  }
-
-  select {
-    padding: $spacing-sm;
-    border-radius: $border-radius-md;
-    border: 1px solid $divider-color;
-    // background-color: $background-color-light;
-    font-size: $font-size-md;
-    width: 100%;
-  }
 }
 </style>

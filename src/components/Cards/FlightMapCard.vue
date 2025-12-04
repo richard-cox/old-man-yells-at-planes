@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import 'leaflet/dist/leaflet.css';
-import { LMap, LTileLayer, LCircleMarker, LPopup } from '@vue-leaflet/vue-leaflet';
+import { LMap, LTileLayer, LCircleMarker, LPopup, LRectangle } from '@vue-leaflet/vue-leaflet';
 import L from 'leaflet';
 
 
@@ -26,6 +26,7 @@ try {
 
 const props = defineProps<{
   flights: FlightEventPointForMap[] | null | undefined;
+  boundingBoxPoints?: [number, number][];
 }>();
 
 const hasEventType = computed(() => {
@@ -40,6 +41,7 @@ const center = [53.3833, -2.2333]; // Manchester
 
 <template>
   <div class="flight-map-card">
+    <br>{{boundingBoxPoints}}<br>
     <div v-if="flights?.length > 0" style="height: 500px; width: 100%">
       <l-map ref="map" :zoom="8" :center="center">
         <l-tile-layer
@@ -48,6 +50,13 @@ const center = [53.3833, -2.2333]; // Manchester
           name="OpenStreetMap"
           attribution="&copy; <a href='http://www.openstreetmap.org/copyright'>OpenStreetMap</a>"
         ></l-tile-layer>
+        <l-rectangle
+          v-for="(bounds, index) in boundingBoxPoints"
+          :key="`bounds-${index}`"
+          :bounds="bounds"
+          color="blue"
+          :fill-opacity="0.1"
+        />
         <l-circle-marker
           v-for="(point, index) in flights"
           :key="index"
@@ -68,7 +77,7 @@ const center = [53.3833, -2.2333]; // Manchester
     </div>
     <div v-else class="message">No recent flight points to display.</div>
     <div v-if="flights?.length > 0" class="flight-summary">
-      <h4>Flight Events</h4>
+      <h4>Flight {{ hasEventType ? 'Events' : 'Summary' }}</h4>
       <table>
         <thead>
           <tr>

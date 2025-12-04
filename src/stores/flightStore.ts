@@ -30,17 +30,17 @@ interface FlightState {
   recentHours: number;
   recentHeight: number;
   recentFlights: AsyncData<number>;
+  recentPreciseLocation: boolean;
   liveFlights: AsyncData<number>;
   liveAltitude: number;
   livePollingInterval: number | null;
   _livePollingTickerId: number | null;
+  livePreciseLocation: boolean;
+  roughBounds: string;
+  roughBoundsArray: [number, number][];
+  preciseBounds: string;
+  preciseBoundsArray: [number, number][];
 }
-
-// type FlightEventPointForMap = FlightSummaryLight & {
-//   events: HistoricFlightEvent[];
-// };
-
-// type LiveFlightPointForMap = FlightSummaryLight & FlightTrackPoint;
 
 export interface FlightWithEvents {
   flight_id: string;
@@ -131,6 +131,7 @@ const makeBounds = (
   lat_delta: number = 1.0,
   lon_delta: number = 1.0
 ): string => {
+  debugger;
   const north: number = center_lat + lat_delta;
   const south: number = center_lat - lat_delta;
   const west: number = center_lon - lon_delta;
@@ -143,7 +144,25 @@ const makeBounds = (
 if (!HARDCODED_LAT || !HARDCODED_LON) {
   throw new Error('Missing base location env vars');
 }
-const myBounds = makeBounds(HARDCODED_LAT, HARDCODED_LON); // TODO: RC delta needs to be SMALLER
+// TODO: RC eugh dupe
+const roughBounds = makeBounds(Number.parseFloat(HARDCODED_LAT), Number.parseFloat(HARDCODED_LON)); // TODO: RC delta needs to be SMALLER
+const parts = roughBounds.split(',');
+const lats = [Number.parseFloat(parts[0]), Number.parseFloat(parts[1])];
+const lons = [Number.parseFloat(parts[2]), Number.parseFloat(parts[3])];
+const roughBoundsArray = [
+  [Math.min(...lats), Math.min(...lons)],
+  [Math.max(...lats), Math.max(...lons)],
+];
+
+// 0.0045 degrees (500m / 111,000m per degree)
+const preciseBounds = makeBounds(Number.parseFloat(HARDCODED_LAT), Number.parseFloat(HARDCODED_LON), 0.0045, 0.0045); // TODO: RC delta needs to be precise
+const parts2 = preciseBounds.split(',');
+const lats2 = [Number.parseFloat(parts2[0]), Number.parseFloat(parts2[1])];
+const lons2 = [Number.parseFloat(parts2[2]), Number.parseFloat(parts2[3])];
+const preciseBoundsArray = [
+  [Math.min(...lats2), Math.min(...lons2)],
+  [Math.max(...lats2), Math.max(...lons2)],
+];
 
 const emptyAsync = <T = any>(): AsyncData<T> => ({
   data: null,
@@ -172,10 +191,16 @@ export const useFlightStore = defineStore('flight', {
     recentHours: 1,
     recentHeight: 10000,
     recentFlights: emptyAsync<number>(),
+    recentPreciseLocation: false,
     liveFlights: emptyAsync<number>(),
     liveAltitude: 10000,
     livePollingInterval: null, // 10s, 60s, 300s
     _livePollingTickerId: null,
+    livePreciseLocation: false,
+    roughBounds: roughBounds,
+    roughBoundsArray,
+    preciseBounds,
+    preciseBoundsArray,
   }),
   getters: {
     /**
@@ -396,9 +421,10 @@ export const useFlightStore = defineStore('flight', {
               continue;
             }
 
-            // if (!e.lat || !e.lon || !isInBounds(e.lat, e.lon)) {
-            //   continue;
-            // }
+            // TODO: RC wire in bounds
+            if (this.recentPreciseLocation && (!e.lat || !e.lon || !isInBounds(e.lat, e.lon))) {
+              continue;
+            }
 
             return true;
           }
@@ -455,18 +481,18 @@ export const useFlightStore = defineStore('flight', {
       liveFlights.isLoading = true;
 
       try {
-        // flights = client.live.flight_positions.get_light(bounds=BOUNDS)
-        //     inside = list(flights_in_circle(flights.data))
-
-        const lifeFlightsResp = await client.live.flightPositions.getLight({
-          bounds: myBounds,
-          airports: 'outbound:MAN',
+        const liveFlightsResp = await client.live.flightPositions.getLight({
+          bounds: roughBounds,
+          // airports: 'outbound:MAN', // TODO: RC REVERT
+          // airports: 'MAN',
           // limit: 15, // TODO: RC  max is 20
         });
 
         // TODO: RC filter on bounds
         // const inBounds = lifeFlightsResp.data.filter((flight) => isInBounds(flight.lat, flight.lon));
-        const inBounds = lifeFlightsResp.data;
+        const inBounds = this.livePreciseLocation
+          ? liveFlightsResp.data.filter((flight) => isInBounds(flight.lat, flight.lon))
+          : liveFlightsResp.data;
 
         // TODO: RC filter on alt
         const inHeight = inBounds.filter((f) => f.alt && f.alt <= this.liveAltitude);

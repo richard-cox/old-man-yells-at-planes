@@ -6,10 +6,10 @@ import HeightInput from '@/components/HeightInput.vue';
 import BaseButton from '@/components/BaseButton.vue';
 import FlightMapCard from '@/components/Cards/FlightMapCard.vue';
 
-
 const flightStore = useFlightStore();
 
-const { liveAltitude, livePollingInterval, liveFlights, _livePollingTickerId } = storeToRefs(flightStore);
+const { preciseBoundsArray, roughBounds, roughBoundsArray, liveAltitude, livePollingInterval, liveFlights, _livePollingTickerId, livePreciseLocation } =
+  storeToRefs(flightStore);
 
 // When the component is unmounted, stop polling to prevent memory leaks.
 onUnmounted(() => {
@@ -31,6 +31,10 @@ onUnmounted(() => {
               <option :value="60">1 minute</option>
               <option :value="300">5 minutes</option>
             </select>
+          </div>
+          <div class="checkbox-control">
+            <input id="live-precise-location" type="checkbox" v-model="livePreciseLocation" />
+            <label for="live-precise-location">Filter to precise location</label>
           </div>
         </div>
         <div class="action-area">
@@ -67,7 +71,9 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-    <FlightMapCard :flights="flightStore.liveFlights?.points" />
+    <!-- <br>!!{{roughBounds}}!!<br> -->
+     <!-- TODO: RC add precise as different colour, and only if checked -->
+    <FlightMapCard :flights="flightStore.liveFlights?.points" :boundingBoxPoints="[roughBoundsArray, preciseBoundsArray]" />
   </div>
 </template>
 
@@ -76,41 +82,11 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 @use '@/assets/styles/_variables.scss' as *;
 @use '@/assets/styles/card.scss';
+@use '@/assets/styles/forms.scss';
 
 .live-flights-card {
   display: flex;
   flex-direction: column;
   gap: $spacing-lg;
 }
-
-// TODO: RC why isn't this common?
-.input-group {
-  > * {
-    min-width: 200px;
-  }
-}
-
-// TODO: RC why isn't this common?
-.form-control {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-xs;
-  text-align: left;
-
-  label {
-    font-weight: bold;
-    color: $text-color-secondary;
-    font-size: $font-size-sm;
-    margin-left: $spacing-xs;
-  }
-
-  select {
-    padding: $spacing-sm;
-    border-radius: $border-radius-md;
-    border: 1px solid $divider-color;
-    font-size: $font-size-md;
-    width: 100%;
-  }
-}
-
 </style>

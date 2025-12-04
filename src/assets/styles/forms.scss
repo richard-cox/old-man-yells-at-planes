@@ -1,0 +1,44 @@
+@use '@/assets/styles/_variables.scss' as *;
+
+.input-group {
+  > * {
+    min-width: 200px;
+  }
+}
+
+.form-control {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  text-align: left;
+
+  label {
+    font-weight: bold;
+    color: $text-color-secondary;
+    font-size: $font-size-sm;
+    margin-left: $spacing-xs;
+  }
+
+  select {
+    padding: $spacing-sm;
+    border-radius: $border-radius-md;
+    border: 1px solid $divider-color;
+    font-size: $font-size-md;
+    width: 100%;
+  }
+}
+
+.checkbox-control {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  // padding-top: calc($font-size-sm + $spacing-xs); // Align with other inputs
+
+  label {
+    font-size: $font-size-md;
+  }
+
+  input[type='checkbox'] {
+    margin: 0 $spacing-sm 0 $spacing-xs;
+  }
+}
