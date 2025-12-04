@@ -9,11 +9,8 @@ const { apiCallsInLastMinute, apiUsage } = storeToRefs(flightStore);
 </script>
 
 <template>
-  <div class="api-usage-card">
-    <div class="card-header">
-      <h2 class="card-title">API Usage</h2>
-    </div>
-    <div class="usage-item">
+  <div class="api-usage-card base-card">
+    <div class="card-content usage-item">
       <div class="usage-item-row">
         <span class="label">Calls (last min):</span>
         <strong :class="{ 'high-usage': apiCallsInLastMinute >= 10 }">{{ apiCallsInLastMinute }}</strong>
@@ -57,17 +54,11 @@ const { apiCallsInLastMinute, apiUsage } = storeToRefs(flightStore);
   box-shadow: $box-shadow-elevation-2;
   padding: $spacing-lg;
   width: 100%;
-  max-width: 800px;
+  // max-width: 800px;
   box-sizing: border-box;
   color: $text-color-primary;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: $spacing-md;
-}
 
 .card-title {
   margin-top: 0;

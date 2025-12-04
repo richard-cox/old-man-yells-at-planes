@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, ref, shallowRef } from 'vue';
 import { useFlightStore } from '@/stores/flightStore';
 import ApiUsageCard from '@/components/Cards/ApiUsageCard.vue';
 import RecentFlightsCard from '@/components/Cards/RecentFlightsCard.vue';
@@ -7,6 +7,15 @@ import FlightLargeTimespanCard from '@/components/Cards/FlightLargeTimespanCard.
 import LiveFlightsCard from '@/components/Cards/LiveFlightsCard.vue';
 
 const flightStore = useFlightStore();
+
+const tabs = shallowRef({
+  'Live Flights': LiveFlightsCard,
+  'Recent Flights': RecentFlightsCard,
+  'Ranged Flights': FlightLargeTimespanCard,
+  'API Usage': ApiUsageCard
+});
+
+const activeTab = ref('Live Flights');
 
 // Set initial date range to last 7 days
 onMounted(() => {
@@ -18,10 +27,23 @@ onMounted(() => {
 <template>
   <div class="app-container">
     <h1 class="app-title">Flight Summary</h1>
-    <FlightLargeTimespanCard />
-    <RecentFlightsCard />
-    <LiveFlightsCard />
-    <ApiUsageCard />
+    <div class="tabs-container">
+      <div class="tab-navigation">
+        <button
+          v-for="(_, tabName) in tabs"
+          :key="tabName"
+          :class="['tab-button', { active: activeTab === tabName }]"
+          @click="activeTab = tabName"
+        >
+          {{ tabName }}
+        </button>
+      </div>
+      <div class="tab-content">
+        <KeepAlive>
+          <component :is="tabs[activeTab]" />
+        </KeepAlive>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -32,7 +54,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: $spacing-lg;
   min-height: 100vh;
   padding: $spacing-md;
@@ -58,4 +80,46 @@ onMounted(() => {
   }
 }
 
+.tabs-container {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.tab-navigation {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  border-bottom: 2px solid $border-color;
+  padding-bottom: $spacing-md;
+}
+
+.tab-button {
+  padding: $spacing-sm $spacing-md;
+  font-size: 1rem;
+  font-weight: 600;
+  color: $text-color-secondary;
+  background-color: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  white-space: nowrap;
+
+  &:hover {
+    color: $accent-color;
+  }
+
+  &.active {
+    color: $accent-color;
+    border-bottom-color: $accent-color;
+  }
+}
+
+.tab-content {
+  width: 100%;
+}
 </style>

@@ -57,9 +57,6 @@ const center = [53.3833, -2.2333]; // Manchester
 
 <template>
   <div class="flight-map-card">
-
-  <br>{{JSON.stringify(flights)}}<br>
-  <br>{{flights?.length}}<br>
     <div v-if="flights?.length > 0" style="height: 500px; width: 100%">
       <l-map ref="map" :zoom="8" :center="center">
         <l-tile-layer
@@ -87,6 +84,27 @@ const center = [53.3833, -2.2333]; // Manchester
       </l-map>
     </div>
     <div v-else class="message">No recent flight points to display.</div>
+    <div v-if="flights?.length > 0" class="flight-summary">
+      <h4>Flight Summary</h4>
+      <table>
+        <thead>
+          <tr>
+            <th>Callsign</th>
+            <th>Altitude</th>
+            <th>Origin</th>
+            <th>Destination</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(point, index) in flights" :key="`summary-${index}`">
+            <td>{{ point.callsign }}</td>
+            <td>{{ point.alt }}ft</td>
+            <td>{{ point.orig }}</td>
+            <td>{{ point.dest }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 
@@ -103,5 +121,27 @@ const center = [53.3833, -2.2333]; // Manchester
     padding: $spacing-xl 0;
   }
 
+  .flight-summary {
+    margin-top: $spacing-lg;
+    h4 {
+      margin-bottom: $spacing-md;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th,
+    td {
+      padding: $spacing-sm;
+      text-align: left;
+      border-bottom: 1px solid $border-color;
+    }
+    th {
+      font-weight: bold;
+    }
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+  }
 }
 </style>

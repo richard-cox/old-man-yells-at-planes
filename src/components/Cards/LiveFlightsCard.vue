@@ -19,7 +19,6 @@ onUnmounted(() => {
 
 <template>
   <div class="live-flights-card base-card">
-    <h2>Live Flights Overhead</h2>
     <div class="card-content">
       <div class="options-section">
         <div class="input-group">
@@ -62,12 +61,6 @@ onUnmounted(() => {
         <div v-else-if="liveFlights.data !== null" class="summary-content">
           <p class="flight-count-label">Flights under {{ liveAltitude }} feet:</p>
           <p class="flight-count-value">{{ liveFlights.data }}</p>
-          <ul v-if="liveFlights.points && liveFlights.points.length > 0">
-            <li v-for="flight in liveFlights.points" :key="flight.fr24_id">
-              {{ flight.callsign || flight.flight || 'N/A' }} ({{ flight.reg }}) at
-              {{ flight.alt }} ft
-            </li>
-          </ul>
         </div>
         <div velse class="no-data-state">
           <p>Use the controls to fetch live flight data.</p>
@@ -120,20 +113,4 @@ onUnmounted(() => {
   }
 }
 
-// Styles for the results list
-ul {
-  list-style-type: none;
-  padding: 0;
-  margin-top: $spacing-md;
-  max-height: 200px;
-  overflow-y: auto;
-}
-li {
-  background-color: #f9f9f9;
-  border: 1px solid #eee;
-  padding: 8px;
-  margin-top: 4px;
-  border-radius: $border-radius-sm;
-  text-align: left;
-}
 </style>

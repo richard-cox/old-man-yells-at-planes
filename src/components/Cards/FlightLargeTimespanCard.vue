@@ -25,7 +25,6 @@ onMounted(() => {
 
 <template>
   <div class="flight-large-timespan-card base-card">
-    <h2>Summary for Flights - Date Range and Height</h2>
     <div class="card-content">
       <div class="options-section">
         <div class="input-group">
@@ -77,10 +76,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: $spacing-lg;
-  h2 {
-    margin-top: 0;
-    text-align: center;
-  }
 }
 .options-section {
   h2 {

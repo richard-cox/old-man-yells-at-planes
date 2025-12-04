@@ -23,7 +23,6 @@ const hourOptions = [1, 2, 3];
 
 <template>
   <div class="recent-flights-card base-card">
-    <h2>Summary of Recent flights</h2>
     <div class="card-content">
       <div class="options-section">
         <div class="input-group">
@@ -80,10 +79,6 @@ const hourOptions = [1, 2, 3];
   display: flex;
   flex-direction: column;
   gap: $spacing-lg;
-  h2 {
-    margin-top: 0;
-    text-align: center;
-  }
 }
 .input-group {
   > * {
