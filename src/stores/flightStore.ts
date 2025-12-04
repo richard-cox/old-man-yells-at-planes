@@ -20,6 +20,9 @@ interface FlightState {
   apiUsage: AsyncData<UsageLogSummary[]>;
   client: FlightRadar24Client | null;
   _ticker: number;
+  recentHours: number;
+  recentHeight: number;
+  recentFlights: AsyncData<any>;
 }
 
 const {
@@ -73,7 +76,7 @@ const isInBounds = (lat: number, lon: number): boolean => {
   const distance = getDistanceInMeters(lat, lon, HARDCODED_LAT, HARDCODED_LON);
 
   if (Number.isNaN(distance)) {
-    console.warn('isInBounds', 'derp', lat, lon, HARDCODED_LAT, HARDCODED_LON, distance);
+    console.warn('isInBounds', 'nup', lat, lon, HARDCODED_LAT, HARDCODED_LON, distance);
 
     return false;
   } else {
@@ -99,6 +102,14 @@ export const useFlightStore = defineStore('flight', {
       error: null,
     },
     _ticker: 0,
+    // State for RecentFlightsCard
+    recentHours: 1,
+    recentHeight: 10000,
+    recentFlights: {
+      data: null,
+      isLoading: false,
+      error: null,
+    },
   }),
   getters: {
     /**
@@ -240,6 +251,84 @@ export const useFlightStore = defineStore('flight', {
         console.error('Error fetching flight summary:', err);
       } finally {
         this.flightSummary.isLoading = false;
+      }
+    },
+
+    async fetchRecentFlights() {
+      this.recentFlights.isLoading = true;
+      this.recentFlights.error = null;
+      this.recentFlights.data = null; // Clear previous data
+
+      // Basic validation
+      if (!this.recentHours || this.recentHours <= 0) {
+        this.recentFlights.error = 'Please select a valid time range.';
+        this.recentFlights.isLoading = false;
+        return;
+      }
+      if (this.recentHeight < 0) {
+        this.recentFlights.error = 'Height cannot be negative.';
+        this.recentFlights.isLoading = false;
+        return;
+      }
+
+      try {
+        const now = new Date();
+        const fromDate = new Date(now.getTime() - this.recentHours * 60 * 60 * 1000);
+
+        const allFlights = await this.client.flightSummary.getLight({
+          flight_datetime_from: fromDate.toISOString(),
+          flight_datetime_to: now.toISOString(),
+          airports: 'MAN',
+          limit: 15, // TODO: RC  ????
+        });
+
+        console.warn('fetchRecent: ', 'allFlights', allFlights);
+
+        const flights = allFlights.data.map((d) => d.fr24_id);
+
+        if (flights.length === 0) {
+          this.recentFlights.data = 0;
+          return;
+        }
+
+        if (flights.length > 15) {
+          throw new Error('TODO: RC max 15');
+        }
+
+        const flightEvents = await this.client.historic.flightEvents.getLight({
+          flight_ids: flights.join(','),
+          event_types: ['cruising', 'descent'],
+        });
+
+        console.warn('fetchRecent: ', 'flightEvents', flightEvents);
+
+        const flightsUnderHeight = flightEvents.data.filter((event) => {
+          for (let i = 0; i < event.events.length; i++) {
+            const e = event.events[i];
+            if (!['cruising', 'descent'].includes(e.type)) {
+              continue;
+            }
+
+            if (!e.alt || e.alt > this.recentHeight) {
+              continue;
+            }
+
+            if (!e.lat || !e.lon || !isInBounds(e.lat, e.lon)) {
+              continue;
+            }
+
+            return true;
+          }
+        });
+
+        console.warn('fetchRecent: ', 'flightsUnderHeight', flightsUnderHeight);
+
+        this.recentFlights.data = flightsUnderHeight.length;
+      } catch (err) {
+        this.recentFlights.error = err instanceof Error ? err.message : 'An unknown error occurred.';
+        console.error('Error fetching recent flights:', err);
+      } finally {
+        this.recentFlights.isLoading = false;
       }
     },
   },

@@ -2,6 +2,7 @@
 import { onMounted } from 'vue';
 import { useFlightStore } from '@/stores/flightStore';
 import ApiUsageCard from '@/components/Cards/ApiUsageCard.vue';
+import RecentFlightsCard from '@/components/Cards/RecentFlightsCard.vue';
 import FlightLargeTimespanCard from '@/components/Cards/FlightLargeTimespanCard.vue';
 
 const flightStore = useFlightStore();
@@ -17,6 +18,7 @@ onMounted(() => {
   <div class="app-container">
     <h1 class="app-title">Flight Summary</h1>
     <FlightLargeTimespanCard />
+    <RecentFlightsCard />
 
     <ApiUsageCard />
   </div>
