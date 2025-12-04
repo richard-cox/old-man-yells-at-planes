@@ -4,7 +4,6 @@ import { useFlightStore } from '@/stores/flightStore';
 import ApiUsageCard from '@/components/Cards/ApiUsageCard.vue';
 import RecentFlightsCard from '@/components/Cards/RecentFlightsCard.vue';
 import FlightLargeTimespanCard from '@/components/Cards/FlightLargeTimespanCard.vue';
-import FlightMapCard from '@/components/Cards/FlightMapCard.vue';
 
 const flightStore = useFlightStore();
 
@@ -20,7 +19,6 @@ onMounted(() => {
     <h1 class="app-title">Flight Summary</h1>
     <FlightLargeTimespanCard />
     <RecentFlightsCard />
-    <FlightMapCard />
 
     <ApiUsageCard />
   </div>

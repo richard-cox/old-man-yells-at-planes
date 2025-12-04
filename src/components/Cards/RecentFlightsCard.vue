@@ -3,6 +3,7 @@ import { useFlightStore } from '@/stores/flightStore';
 import HeightInput from '@/components/HeightInput.vue';
 import BaseButton from '@/components/BaseButton.vue';
 import { onMounted } from 'vue';
+import FlightMapCard from '@/components/Cards/FlightMapCard.vue';
 
 const flightStore = useFlightStore();
 
@@ -67,6 +68,7 @@ const hourOptions = [1, 2, 3];
         </div>
       </div>
     </div>
+    <FlightMapCard :flights="flightStore.recentFlights?.points" />
   </div>
 </template>
 

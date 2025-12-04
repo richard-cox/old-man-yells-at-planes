@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useFlightStore } from '@/stores/flightStore';
 import 'leaflet/dist/leaflet.css';
 import { LMap, LTileLayer, LCircleMarker, LPopup } from '@vue-leaflet/vue-leaflet';
 import L from 'leaflet';
@@ -25,14 +24,16 @@ try {
   console.error('Could not load leaflet marker icons', e);
 }
 
-const flightStore = useFlightStore();
+const props = defineProps<{
+  flights: FlightEventPointForMap[] | null | undefined;
+}>();
 
 // Create a Map for efficient ICAO code lookups.
 const airportNameMap = new Map<string, string>(Object.entries(airportData));
 
-const flightPoints = computed(() => {
+const flightPoints = computed<FlightEventPointForMap[]>(() => {
   return (
-    flightStore.recentFlightPoints.data
+    props.flights
       ?.flatMap((flight) =>
         flight.events
           .filter((event) => event.lat && event.lon)
@@ -44,6 +45,7 @@ const flightPoints = computed(() => {
             orig: airportNameMap.get(flight.orig_icao) || 'Unknown',
             dest: airportNameMap.get(flight.dest_icao_actual) || 'Unknown',
             type: event.type,
+            alt: event.alt
           }))
       ) || []
   );
@@ -56,12 +58,7 @@ const center = [53.3833, -2.2333]; // Manchester
 
 <template>
   <div class="flight-map-card">
-    <h2>Recent Flight Event Points</h2>
-    <div v-if="flightStore.recentFlightPoints.isLoading" class="message">Loading map data...</div>
-    <div v-else-if="flightStore.recentFlightPoints.error" class="error-message">
-      Error loading flight paths: {{ flightStore.recentFlightPoints.error }}
-    </div>
-    <div v-else-if="flightPoints.length > 0" style="height: 500px; width: 100%">
+    <div v-if="flightPoints.length > 0" style="height: 500px; width: 100%">
       <l-map ref="map" :zoom="8" :center="center">
         <l-tile-layer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -79,6 +76,7 @@ const center = [53.3833, -2.2333]; // Manchester
         >
           <l-popup>
             <b>Flight:</b> {{ point.callsign }}<br />
+            <b>Altitude:</b> {{ point.alt }}<br />
             <b>Orig:</b> {{ point.orig }}<br />
             <b>Dest:</b> {{ point.dest }}<br />
             <b>Event Type:</b> {{ point.type }}
@@ -94,19 +92,8 @@ const center = [53.3833, -2.2333]; // Manchester
 @use '@/assets/styles/_variables.scss' as *;
 
 .flight-map-card {
-  background-color: $card-background-color;
-  border-radius: $border-radius-md;
-  padding: $spacing-lg;
-  // box-shadow: $box-shadow-lifted; TODO: RC
   width: 100%;
-  max-width: 900px;
   text-align: left;
-
-  h2 {
-    margin-top: 0;
-    color: $accent-color;
-    margin-bottom: $spacing-md;
-  }
 
   .message {
     color: $text-color-secondary;
@@ -114,10 +101,5 @@ const center = [53.3833, -2.2333]; // Manchester
     padding: $spacing-xl 0;
   }
 
-  .error-message {
-    color: $error-color;
-    text-align: center;
-    padding: $spacing-xl 0;
-  }
 }
 </style>

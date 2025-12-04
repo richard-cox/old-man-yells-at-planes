@@ -8,6 +8,7 @@ import {
 
 interface AsyncData<T> {
   data: T | null;
+  points: FlightEventPointForMap[] | null;
   isLoading: boolean;
   error: string | null;
 }
@@ -23,7 +24,6 @@ interface FlightState {
   recentHours: number;
   recentHeight: number;
   recentFlights: AsyncData<number>;
-  recentFlightPoints: AsyncData<FlightEventPointForMap[]>;
 }
 
 interface Flight {
@@ -61,7 +61,7 @@ interface FlightEventPoint {
 }
 
 type FlightEventPointForMap = Flight & {
-  events: FlightEvent[];
+  events: FlightEventPoint[];
 };
 
 export interface FlightWithEvents {
@@ -137,11 +137,13 @@ export const useFlightStore = defineStore('flight', {
     client: null,
     flightSummary: {
       data: null,
+      points: null,
       isLoading: false,
       error: null,
     },
     apiUsage: {
       data: null,
+      points: null,
       isLoading: false,
       error: null,
     },
@@ -151,11 +153,7 @@ export const useFlightStore = defineStore('flight', {
     recentHeight: 10000,
     recentFlights: {
       data: null,
-      isLoading: false,
-      error: null,
-    },
-    recentFlightPoints: {
-      data: null,
+      points: null,
       isLoading: false,
       error: null,
     },
@@ -307,6 +305,7 @@ export const useFlightStore = defineStore('flight', {
       this.recentFlights.isLoading = true;
       this.recentFlights.error = null;
       this.recentFlights.data = null; // Clear previous data
+      this.recentFlights.points = null; // Clear previous data
 
       // Basic validation
       if (!this.recentHours || this.recentHours <= 0) {
@@ -337,7 +336,7 @@ export const useFlightStore = defineStore('flight', {
 
         if (allFlights.length === 0) {
           this.recentFlights.data = 0;
-          this.recentFlightPoints.data = [];
+          this.recentFlights.points = [];
           return;
         }
 
@@ -355,7 +354,7 @@ export const useFlightStore = defineStore('flight', {
 
         if (flightEvents.length === 0) {
           this.recentFlights.data = 0;
-          this.recentFlightPoints.data = [];
+          this.recentFlights.points = [];
           return;
         }
 
@@ -367,7 +366,7 @@ export const useFlightStore = defineStore('flight', {
           {} as Record<string, Flight>
         );
 
-        this.recentFlightPoints.data = flightEvents.map((event) => {
+        this.recentFlights.points = flightEvents.map((event) => {
           const flight = flightsMapped[event.fr24_id];
 
           return {

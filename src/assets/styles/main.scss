@@ -80,16 +80,16 @@ body {
 //   width: 100%;
 //   box-sizing: border-box;
 // }
-.base-card {
-  background-color: $card-background-color;
-  border-radius: $border-radius-lg;
-  box-shadow: $box-shadow-elevation-2;
-  padding: $spacing-lg;
-  width: 100%;
-  max-width: 800px;
-  box-sizing: border-box;
+// .base-card {
+//   background-color: $card-background-color;
+//   border-radius: $border-radius-lg;
+//   box-shadow: $box-shadow-elevation-2;
+//   padding: $spacing-lg;
+//   width: 100%;
+//   max-width: 800px;
+//   box-sizing: border-box;
 
-  @media (max-width: $breakpoint-sm) {
-    padding: $spacing-md;
-  }
-}
+//   @media (max-width: $breakpoint-sm) {
+//     padding: $spacing-md;
+//   }
+// }
