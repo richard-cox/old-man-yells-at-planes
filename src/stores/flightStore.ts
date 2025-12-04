@@ -22,12 +22,56 @@ interface FlightState {
   _ticker: number;
   recentHours: number;
   recentHeight: number;
-  recentFlights: AsyncData<any>;
+  recentFlights: AsyncData<number>;
+  recentFlightPoints: AsyncData<FlightEventPointForMap[]>;
+}
+
+interface Flight {
+  callsign: string;
+  datetime_landed: string;
+  datetime_takeoff: string;
+  dest_icao: string;
+  dest_icao_actual: string;
+  first_seen: string;
+  flight: string;
+  flight_ended: boolean;
+  fr24_id: string;
+  hex: string;
+  last_seen: string;
+  operating_as: string;
+  orig_icao: string;
+  painted_as: string;
+  reg: string;
+  type: string;
+}
+
+interface FlightEvent {
+  callsign: string;
+  fr24_id: string;
+  hex: string;
+  events: FlightEventPoint[];
+}
+
+interface FlightEventPoint {
+  type: string;
+  alt?: number;
+  lat?: number;
+  lon?: number;
+  [key: string]: any;
+}
+
+type FlightEventPointForMap = Flight & {
+  events: FlightEvent[];
+};
+
+export interface FlightWithEvents {
+  flight_id: string;
+  events: FlightEventPoint[];
 }
 
 const {
-  VITE_FR24_API_TOKEN_SANDBOX: FR24_API_TOKEN,
-  // VITE_FR24_API_TOKEN: FR24_API_TOKEN,
+  // VITE_FR24_API_TOKEN_SANDBOX: FR24_API_TOKEN,
+  VITE_FR24_API_TOKEN: FR24_API_TOKEN,
   VITE_BASE_LAT: HARDCODED_LAT,
   VITE_BASE_LONG: HARDCODED_LON,
 } = import.meta.env;
@@ -106,6 +150,11 @@ export const useFlightStore = defineStore('flight', {
     recentHours: 1,
     recentHeight: 10000,
     recentFlights: {
+      data: null,
+      isLoading: false,
+      error: null,
+    },
+    recentFlightPoints: {
       data: null,
       isLoading: false,
       error: null,
@@ -275,36 +324,65 @@ export const useFlightStore = defineStore('flight', {
         const now = new Date();
         const fromDate = new Date(now.getTime() - this.recentHours * 60 * 60 * 1000);
 
-        const allFlights = await this.client.flightSummary.getLight({
-          flight_datetime_from: fromDate.toISOString(),
-          flight_datetime_to: now.toISOString(),
-          airports: 'MAN',
-          limit: 15, // TODO: RC  ????
+        const allFlightsResp = await this.client.flightSummary.getLight({
+          flight_datetime_from: fromDate.toISOString().split('.')[0],
+          flight_datetime_to: now.toISOString().split('.')[0],
+          airports: 'outbound:MAN',
+          limit: 15, // TODO: RC  max is 20
         });
+
+        const allFlights: Flight[] = allFlightsResp.data;
 
         console.warn('fetchRecent: ', 'allFlights', allFlights);
 
-        const flights = allFlights.data.map((d) => d.fr24_id);
-
-        if (flights.length === 0) {
+        if (allFlights.length === 0) {
           this.recentFlights.data = 0;
+          this.recentFlightPoints.data = [];
           return;
         }
 
-        if (flights.length > 15) {
-          throw new Error('TODO: RC max 15');
+        // if (flights.length > 15) {
+        //   throw new Error('TODO: RC max 15');
+        // }
+
+        const flights = allFlights.map((d) => d.fr24_id);
+        const flightEventsResp = await this.client.historic.flightEvents.getLight({
+          flight_ids: flights.join(','),
+          event_types: ['takeoff', 'airspace_transition', 'cruising', 'descent'],
+        });
+
+        const flightEvents: FlightEvent[] = flightEventsResp.data;
+
+        if (flightEvents.length === 0) {
+          this.recentFlights.data = 0;
+          this.recentFlightPoints.data = [];
+          return;
         }
 
-        const flightEvents = await this.client.historic.flightEvents.getLight({
-          flight_ids: flights.join(','),
-          event_types: ['cruising', 'descent'],
+        const flightsMapped = allFlights.reduce(
+          (res, f) => {
+            res[f.fr24_id] = f;
+            return res;
+          },
+          {} as Record<string, Flight>
+        );
+
+        this.recentFlightPoints.data = flightEvents.map((event) => {
+          const flight = flightsMapped[event.fr24_id];
+
+          return {
+            ...flight,
+            events: event.events,
+          };
         });
+
+        // gate_departure, takeoff, cruising, airspace_transition, descent, landed, gate_arrival
 
         console.warn('fetchRecent: ', 'flightEvents', flightEvents);
 
-        const flightsUnderHeight = flightEvents.data.filter((event) => {
-          for (let i = 0; i < event.events.length; i++) {
-            const e = event.events[i];
+        const flightsUnderHeight = flightEvents.filter((flight) => {
+          for (let i = 0; i < flight.events.length; i++) {
+            const e = flight.events[i];
             if (!['cruising', 'descent'].includes(e.type)) {
               continue;
             }
