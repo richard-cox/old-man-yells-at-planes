@@ -51,8 +51,7 @@ onMounted(() => {
         </div>
 
         <div v-else-if="flightStore.flightSummary.error" class="error-state">
-          <p>Error: {{ flightStore.flightSummary.error }}</p>
-          <p>Please try again.</p>
+          <p>Error: {{ flightStore.flightSummary.error }}. Please try again.</p>
         </div>
 
         <div v-else-if="flightStore.flightSummary?.data !== null" class="summary-content">

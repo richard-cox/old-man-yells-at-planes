@@ -4,8 +4,10 @@ import HeightInput from '@/components/HeightInput.vue';
 import BaseButton from '@/components/BaseButton.vue';
 import { onMounted } from 'vue';
 import FlightMapCard from '@/components/Cards/FlightMapCard.vue';
+import { storeToRefs } from 'pinia';
 
 const flightStore = useFlightStore();
+const { recentHeight } = storeToRefs(flightStore);
 
 const handleFetchData = () => {
   flightStore.fetchRecentFlights();
@@ -26,6 +28,7 @@ const hourOptions = [1, 2, 3];
     <div class="card-content">
       <div class="options-section">
         <div class="input-group">
+          <HeightInput v-model:height="flightStore.recentHeight" />
           <div class="form-control">
             <label for="hours-select">Time Range</label>
             <select id="hours-select" v-model.number="flightStore.recentHours">
@@ -34,7 +37,7 @@ const hourOptions = [1, 2, 3];
               </option>
             </select>
           </div>
-          <HeightInput v-model:height="flightStore.recentHeight" />
+          
         </div>
 
         <div class="action-area">
@@ -53,13 +56,12 @@ const hourOptions = [1, 2, 3];
         </div>
 
         <div v-else-if="flightStore.recentFlights?.error" class="error-state">
-          <p>Error: {{ flightStore.recentFlights.error }}</p>
-          <p>Please try again.</p>
+          <p>Error: {{ flightStore.recentFlights.error }}. Please try again.</p>
         </div>
 
         <div v-else-if="flightStore.recentFlights?.data" class="summary-content">
-          <p class="flight-count-label">Flights:</p>
-          <p class="flight-count-value">{{ flightStore.recentFlights.data.flightCount }}</p>
+          <p class="flight-count-label">Flights under {{ recentHeight }} feet:</p>
+          <p class="flight-count-value">{{ flightStore.recentFlights.data }}</p>
         </div>
 
         <div v-else class="no-data-state">

@@ -62,8 +62,8 @@ onUnmounted(() => {
           <p class="flight-count-label">Flights under {{ liveAltitude }} feet:</p>
           <p class="flight-count-value">{{ liveFlights.data }}</p>
         </div>
-        <div velse class="no-data-state">
-          <p>Use the controls to fetch live flight data.</p>
+        <div v-else class="no-data-state">
+          <p>No data fetched yet. Use the controls to fetch live flight data.</p>
         </div>
       </div>
     </div>
@@ -81,16 +81,16 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: $spacing-lg;
-  h2 {
-    margin-top: 0;
-    text-align: center;
-  }
 }
+
+// TODO: RC why isn't this common?
 .input-group {
   > * {
     min-width: 200px;
   }
 }
+
+// TODO: RC why isn't this common?
 .form-control {
   display: flex;
   flex-direction: column;

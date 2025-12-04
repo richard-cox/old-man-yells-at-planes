@@ -42,11 +42,16 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100px; /* Ensure consistent height */
+  min-height: 50px; /* Ensure consistent height */
+}
+
+.loading-state,
+.summary-content {
+  flex-direction: row;
+  gap: $spacing-sm;
 }
 
 .loading-state {
-  gap: $spacing-sm;
   color: $text-color-secondary;
 }
 
@@ -79,6 +84,7 @@
 }
 
 .summary-content {
+  align-items: baseline;
   .flight-count-label {
     font-size: $font-size-lg;
     color: $text-color-secondary;
@@ -113,6 +119,7 @@
 .action-area {
   display: flex;
   justify-content: center;
+  gap: $spacing-md;
 }
 
 .vertical-divider {

@@ -10,8 +10,8 @@ const flightStore = useFlightStore();
 
 const tabs = shallowRef({
   'Live Flights': LiveFlightsCard,
-  'Recent Flights': RecentFlightsCard,
-  'Ranged Flights': FlightLargeTimespanCard,
+  'Recent Events': RecentFlightsCard,
+  'Ranged Events': FlightLargeTimespanCard,
   'API Usage': ApiUsageCard
 });
 

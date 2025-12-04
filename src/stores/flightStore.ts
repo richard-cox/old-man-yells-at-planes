@@ -381,6 +381,33 @@ export const useFlightStore = defineStore('flight', {
           return;
         }
 
+        // gate_departure, takeoff, cruising, airspace_transition, descent, landed, gate_arrival
+
+        console.warn('fetchRecent: ', 'flightEvents', flightEvents);
+
+        const flightsUnderHeight = flightEvents.filter((flight) => {
+          for (let i = 0; i < flight.events.length; i++) {
+            const e = flight.events[i];
+            if (!['cruising', 'descent'].includes(e.type)) {
+              continue;
+            }
+
+            if (!e.alt || e.alt > this.recentHeight) {
+              continue;
+            }
+
+            // if (!e.lat || !e.lon || !isInBounds(e.lat, e.lon)) {
+            //   continue;
+            // }
+
+            return true;
+          }
+        });
+
+        console.warn('fetchRecent: ', 'flightsUnderHeight', flightsUnderHeight);
+
+        recentFlights.data = flightsUnderHeight.length;
+
         const flightsMapped = allFlights.reduce(
           (res, f) => {
             res[f.fr24_id] = f;
@@ -389,7 +416,7 @@ export const useFlightStore = defineStore('flight', {
           {} as Record<string, FlightSummaryLight>
         );
 
-        recentFlights.points = flightEvents
+        recentFlights.points = flightsUnderHeight
           .map((event) => {
             const flight = flightsMapped[event.fr24_id];
 
@@ -413,33 +440,6 @@ export const useFlightStore = defineStore('flight', {
                 dest: getAirportString(flight.dest_icao),
               }))
           );
-
-        // gate_departure, takeoff, cruising, airspace_transition, descent, landed, gate_arrival
-
-        console.warn('fetchRecent: ', 'flightEvents', flightEvents);
-
-        const flightsUnderHeight = flightEvents.filter((flight) => {
-          for (let i = 0; i < flight.events.length; i++) {
-            const e = flight.events[i];
-            if (!['cruising', 'descent'].includes(e.type)) {
-              continue;
-            }
-
-            if (!e.alt || e.alt > this.recentHeight) {
-              continue;
-            }
-
-            if (!e.lat || !e.lon || !isInBounds(e.lat, e.lon)) {
-              continue;
-            }
-
-            return true;
-          }
-        });
-
-        console.warn('fetchRecent: ', 'flightsUnderHeight', flightsUnderHeight);
-
-        recentFlights.data = flightsUnderHeight.length;
       } catch (err) {
         recentFlights.error = err instanceof Error ? err.message : 'An unknown error occurred.';
         console.error('Error fetching recent flights:', err);
@@ -451,7 +451,7 @@ export const useFlightStore = defineStore('flight', {
     },
 
     async fetchBounds() {
-      const liveFlights: AsyncData<number, FlightEventPointForMap> = emptyAsync<number, FlightEventPointForMap>();
+      const liveFlights: AsyncData<number> = emptyAsync<number>();
       liveFlights.isLoading = true;
 
       try {
@@ -469,8 +469,8 @@ export const useFlightStore = defineStore('flight', {
         const inBounds = lifeFlightsResp.data;
 
         // TODO: RC filter on alt
-        // const inHeight = inBounds.filter((f) => f.alt && f.alt <= this.liveAltitude);
-        const inHeight = inBounds;
+        const inHeight = inBounds.filter((f) => f.alt && f.alt <= this.liveAltitude);
+        // const inHeight = inBounds;
 
         if (inHeight.length === 0) {
           liveFlights.data = 0;

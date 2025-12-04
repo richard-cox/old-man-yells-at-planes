@@ -5,7 +5,7 @@ import { LMap, LTileLayer, LCircleMarker, LPopup } from '@vue-leaflet/vue-leafle
 import L from 'leaflet';
 
 
-
+// TODO: RC Gemini came up with this itself....
 // This is a workaround for a known issue with leaflet and bundlers like Vite.
 // It ensures that the default marker icons are loaded correctly.
 // See: https://vue-leaflet.github.io/vue-leaflet/guide/troubleshooting.html#marker-icons-are-not-showing
@@ -28,27 +28,10 @@ const props = defineProps<{
   flights: FlightEventPointForMap[] | null | undefined;
 }>();
 
+const hasEventType = computed(() => {
+  return props.flights?.some((flight) => flight.type);
+});
 
-// const flightPoints = computed<FlightEventPointForMap[]>(() => {
-//   return (
-//     props.flights
-//       ?.flatMap((flight) =>
-//         flight.events
-//           .filter((event) => event.lat && event.lon)
-//           .map((event) => ({
-//             lat: event.lat!,
-//             lon: event.lon!,
-//             alt: event.alt,
-
-//             type: event.type, // only on event not others
-
-//             callsign: flight.callsign,
-//             orig: airportNameMap.get(flight.orig_icao) || 'Unknown',
-//             dest: airportNameMap.get(flight.dest_icao_actual) || 'Unknown',
-//           }))
-//       ) || []
-//   );
-// });
 
 // Using the hardcoded lat/lon from the store's env vars would be better,
 // but they aren't exported. This is a close approximation of Manchester.
@@ -85,7 +68,7 @@ const center = [53.3833, -2.2333]; // Manchester
     </div>
     <div v-else class="message">No recent flight points to display.</div>
     <div v-if="flights?.length > 0" class="flight-summary">
-      <h4>Flight Summary</h4>
+      <h4>Flight Events</h4>
       <table>
         <thead>
           <tr>
@@ -93,6 +76,7 @@ const center = [53.3833, -2.2333]; // Manchester
             <th>Altitude</th>
             <th>Origin</th>
             <th>Destination</th>
+            <th v-if="hasEventType">Event Type</th>
           </tr>
         </thead>
         <tbody>
@@ -101,6 +85,7 @@ const center = [53.3833, -2.2333]; // Manchester
             <td>{{ point.alt }}ft</td>
             <td>{{ point.orig }}</td>
             <td>{{ point.dest }}</td>
+            <td v-if="hasEventType">{{ point.type }}</td>
           </tr>
         </tbody>
       </table>
